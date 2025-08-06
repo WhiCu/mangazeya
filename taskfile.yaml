@@ -1,0 +1,26 @@
+version: '3'
+
+silent: false
+
+env:
+  PATH_MAIN: .
+  PATH_EXE: tmp
+  APP_NAME: mangazeya
+
+tasks:
+  test:
+    desc: Run tests
+    cmds:
+      - echo "Run tests"
+      - go test ./... -v -cover
+  build:
+    desc: Build the application
+    deps: [test]
+    cmds:
+      - echo "Build the application"
+      - go build -o {{.PATH_EXE}}/{{.APP_NAME}}.exe {{.PATH_MAIN}}/main.go
+  air:
+    desc: Run air
+    cmds:
+      - echo "Run air"
+      - air -d
