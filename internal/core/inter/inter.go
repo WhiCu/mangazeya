@@ -1,7 +1,10 @@
 package inter
 
 import (
+	"encoding/json"
+	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/shirou/gopsutil/v4/net"
 )
@@ -17,13 +20,84 @@ type Addr struct {
 }
 
 type Interface struct {
-	MTU          int      `json:"mtu"`          // maximum transmission unit
-	HardwareAddr string   `json:"hardwareAddr"` // IEEE MAC-48, EUI-48 and EUI-64 form
-	Flags        []string `json:"flags"`        // e.g., FlagUp, FlagLoopback, FlagMulticast
-	Addrs        []Addr   `json:"addrs"`
+	MTU          int      `json:"mtu,omitempty"`          // maximum transmission unit
+	HardwareAddr string   `json:"hardwareAddr,omitempty"` // IEEE MAC-48, EUI-48 and EUI-64 form
+	Flags        []string `json:"flags,omitempty"`        // e.g., FlagUp, FlagLoopback, FlagMulticast
+	Addrs        []Addr   `json:"addrs,omitempty"`
 }
 
-func Interfaces() (map[string]Interface, error) {
+func (i Interface) String() string {
+	b := strings.Builder{}
+
+	if i.MTU != 0 {
+		fmt.Fprintf(&b, "MTU: %d\n", i.MTU)
+	}
+
+	if i.HardwareAddr != "" {
+		fmt.Fprintf(&b, "HardwareAddr: %s\n", i.HardwareAddr)
+	}
+
+	if len(i.Flags) != 0 {
+		fmt.Fprintf(&b, "Flags: %s\n", strings.Join(i.Flags, " "))
+	}
+
+	if len(i.Addrs) != 0 {
+		fmt.Fprintf(&b, "Addrs: ")
+		for _, a := range i.Addrs {
+			fmt.Fprintf(&b, "%s ", a)
+		}
+		fmt.Fprintf(&b, "\n")
+	}
+
+	return b.String()
+}
+
+func (i Interface) JSON() ([]byte, error) {
+	return json.Marshal(i)
+}
+
+func (i Interface) CoolJSON() ([]byte, error) {
+	return json.MarshalIndent(i, "", "  ")
+}
+
+type InterfaceList map[string]Interface
+
+func (l InterfaceList) List() []string {
+	list := make([]string, 0, len(l))
+	for key := range l {
+		list = append(list, key)
+	}
+	return list
+}
+
+func (l InterfaceList) Interface(name string) Interface {
+	return l[name]
+}
+
+func (l InterfaceList) Count() int {
+	return len(l)
+}
+
+func (l InterfaceList) String() string {
+	b := strings.Builder{}
+
+	for key, value := range l {
+		b.WriteString(fmt.Sprintf("%s:\n%s", key, value))
+	}
+
+	return b.String()
+}
+
+func (l InterfaceList) JSON() ([]byte, error) {
+	return json.Marshal(l)
+}
+
+func (l InterfaceList) CoolJSON() ([]byte, error) {
+
+	return json.MarshalIndent(l, "", "  ")
+}
+
+func Interfaces() (InterfaceList, error) {
 	stat, err := net.Interfaces()
 	if err != nil {
 		return nil, err

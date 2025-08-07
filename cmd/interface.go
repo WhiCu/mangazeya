@@ -35,13 +35,92 @@ to quickly create a Cobra application.`,
 
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		itf, err := inter.Interfaces()
+		itfs, err := inter.Interfaces()
 		if err != nil {
 			return err
 		}
-		for _, i := range itf {
-			fmt.Println(i.Addrs)
+
+		var opts []inter.Option
+
+		if name := viper.GetString("name"); name != "" {
+			itf := itfs.Interface(name)
+			if !viper.GetBool("mtu") {
+				opts = append(opts, inter.WithoutMTU())
+			}
+
+			if !viper.GetBool("hwaddr") {
+				opts = append(opts, inter.WithoutHardwareAddr())
+			}
+
+			if !viper.GetBool("flags") {
+				opts = append(opts, inter.WithoutFlags())
+			}
+
+			if !viper.GetBool("addrs") {
+				opts = append(opts, inter.WithoutAddrs())
+			}
+
+			itf.With(opts...)
+
+			if viper.GetBool("json") {
+				json, err := itf.JSON()
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(json))
+				return nil
+			}
+
+			if viper.GetBool("cooljson") {
+				json, err := itf.CoolJSON()
+				if err != nil {
+					return err
+				}
+				fmt.Println(string(json))
+				return nil
+			}
+
+			fmt.Println(itf)
 		}
+
+		if !viper.GetBool("mtu") {
+			opts = append(opts, inter.WithoutMTU())
+		}
+
+		if !viper.GetBool("hwaddr") {
+			opts = append(opts, inter.WithoutHardwareAddr())
+		}
+
+		if !viper.GetBool("flags") {
+			opts = append(opts, inter.WithoutFlags())
+		}
+
+		if !viper.GetBool("addrs") {
+			opts = append(opts, inter.WithoutAddrs())
+		}
+
+		itfs = itfs.With(opts...)
+
+		if viper.GetBool("json") {
+			json, err := itfs.JSON()
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(json))
+			return nil
+		}
+
+		if viper.GetBool("cooljson") {
+			json, err := itfs.CoolJSON()
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(json))
+			return nil
+		}
+
+		fmt.Println(itfs)
+
 		return nil
 	},
 }
@@ -84,14 +163,19 @@ func init() {
 		panic(err)
 	}
 
-	interfaceCmd.Flags().BoolP("hardwareAddr", "w", false, "Hardware address")
-	err = viper.BindPFlag("hardwareAddr", interfaceCmd.Flags().Lookup("hardwareAddr"))
+	interfaceCmd.Flags().BoolP("hwaddr", "w", false, "Hardware address")
+	err = viper.BindPFlag("hwaddr", interfaceCmd.Flags().Lookup("hwaddr"))
 	if err != nil {
 		panic(err)
 	}
 
 	interfaceCmd.Flags().BoolP("json", "j", false, "JSON")
 	err = viper.BindPFlag("json", interfaceCmd.Flags().Lookup("json"))
+	if err != nil {
+		panic(err)
+	}
+	interfaceCmd.Flags().BoolP("cooljson", "c", false, "Cool JSON")
+	err = viper.BindPFlag("cooljson", interfaceCmd.Flags().Lookup("cooljson"))
 	if err != nil {
 		panic(err)
 	}
