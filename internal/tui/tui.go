@@ -1,52 +1,75 @@
-package main
+package tui
 
 // A simple program that counts down from 5 and then exits.
 
 import (
-	"fmt"
-	"log"
-	"time"
-
-	"github.com/WhiCu/mangazeya/internal/tui/animator"
+	"github.com/charmbracelet/bubbles/help"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 var frame = []string{
-	"=",
-	"==",
-	"===",
-	"====",
-	"=====",
-	"======",
-	"=======",
-	"========",
-	"=========",
-	"==========",
-	"=========",
-	"=======",
-	"=====",
-	"====",
-	"===",
-	"==",
+	`
+╔════╤╤╤╤════╗
+║    │││ \   ║
+║    │││  O  ║
+║    OOO     ║
+	`,
+	`
+╔════╤╤╤╤════╗
+║    ││││    ║
+║    ││││    ║
+║    OOOO    ║
+	`,
+	`
+╔════╤╤╤╤════╗
+║   / │││    ║
+║  O  │││    ║
+║     OOO    ║
+	`,
+	`
+╔════╤╤╤╤════╗
+║    ││││    ║
+║    ││││    ║
+║    OOOO    ║
+	`,
 }
 
-func main() {
-	// Log to a file. Useful in debugging since you can't really log to stdout.
-	// Not required.
-	if _, err := tea.LogToFile("tmp/log.txt", "debug"); err != nil {
-		log.Fatal(err)
-	}
+// keyMap defines the key bindings for the application
+type keyMap struct {
+	Help key.Binding
+	Quit key.Binding
+}
 
-	// Initialize our program
-	p := tea.NewProgram(
-		animator.New(
-			animator.StringFrames(frame),
-			time.Second/10,
-		),
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Help, k.Quit}
+}
+
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Help},
+		{k.Quit},
+	}
+}
+
+var defaultKeys = keyMap{
+	Help: key.NewBinding(key.WithKeys("h", "?"), key.WithHelp("h", "toggle help")),
+	Quit: key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
+}
+
+func NewProgram() *tea.Program {
+	return tea.NewProgram(
+		initModel(),
 		tea.WithAltScreen(),
 	)
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
+}
+
+func initModel() tea.Model {
+	return model{
+		sub:  newSubModel(),
+		keys: defaultKeys,
+		help: help.New(),
 	}
 }
 
@@ -54,48 +77,70 @@ func main() {
 // program, so often it's a struct. For this simple example, however, all
 // we'll need is a simple integer.
 type model struct {
-	count int
+	// UI dimensions
+	width  int
+	height int
+
+	// Logic
+	sub tea.Model
+
+	// Controls
+	keys keyMap
+
+	// Help
+	help help.Model
 }
 
 // Init optionally returns an initial command we should run. In this case we
 // want to start the timer.
 func (m model) Init() tea.Cmd {
-	return tick
+	var cmds tea.BatchMsg
+	cmds = append(cmds, m.sub.Init())
+	return tea.Batch(cmds...)
 }
 
 // Update is called when messages are received. The idea is that you inspect the
 // message and send back an updated model accordingly. You can also return
 // a command, which is a function that performs I/O and returns a message.
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmds tea.BatchMsg
+	var cmd tea.Cmd
 	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
-			return m, tea.Quit
-		}
+	case tea.WindowSizeMsg:
+		m.width, m.height = msg.Width, msg.Height
+		m.help.Width = m.width
 
-	case tickMsg:
-		m.count--
-		if m.count <= 0 {
-			return m, tea.Quit
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.keys.Quit):
+			cmds = append(cmds, tea.Quit)
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 		}
-		return m, tick
 	}
-	return m, nil
+	m.sub, cmd = m.sub.Update(msg)
+	cmds = append(cmds, cmd)
+	return m, tea.Batch(cmds...)
 }
 
 // View returns a string based on data in the model. That string which will be
 // rendered to the terminal.
 func (m model) View() string {
-	return fmt.Sprintf("Hi. This program will exit in %d seconds.\n\nTo quit sooner press ctrl-c, or press ctrl-z to suspend...\n", m.count)
+	return lipgloss.JoinVertical(
+		lipgloss.Center,
+		mainWindowStyle.
+			AlignHorizontal(lipgloss.Center).
+			AlignVertical(lipgloss.Center).
+			Width(m.width-3).
+			Height(m.height-4).
+			Render(
+				m.rednerMainFrame(),
+			),
+		m.help.View(m.keys),
+	)
+
 }
 
-// Messages are events that we respond to in our Update function. This
-// particular one indicates that the timer has ticked.
-type tickMsg time.Time
-
-func tick() tea.Msg {
-	fmt.Println("tick")
-	time.Sleep(time.Second)
-	return tickMsg{}
+func (m model) rednerMainFrame() string {
+	return m.sub.View()
 }

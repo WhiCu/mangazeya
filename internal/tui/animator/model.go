@@ -3,14 +3,36 @@ package animator
 import (
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+type keyMap struct {
+	Quit      key.Binding
+	StopStart key.Binding
+}
+
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.StopStart}
+}
+
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.StopStart},
+	}
+}
+
+var defaultKeys = keyMap{
+	Quit:      key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit")),
+	StopStart: key.NewBinding(key.WithKeys("s", "ctrl+s"), key.WithHelp("s", "stop/start")),
+}
 
 type Frame interface {
 	String() string
 }
 
 type Model struct {
+	Stop         bool
 	CurrentFrame int
 	Rate         time.Duration
 	Frames       []Frame
