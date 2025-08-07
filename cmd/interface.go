@@ -43,7 +43,11 @@ to quickly create a Cobra application.`,
 		var opts []inter.Option
 
 		if name := viper.GetString("name"); name != "" {
-			itf := itfs.Interface(name)
+			itf, ok := itfs.Interface(name)
+			if !ok {
+				fmt.Printf("interface %s not found", name)
+				return nil
+			}
 			if !viper.GetBool("mtu") {
 				opts = append(opts, inter.WithoutMTU())
 			}
@@ -81,6 +85,7 @@ to quickly create a Cobra application.`,
 			}
 
 			fmt.Println(itf)
+			return nil
 		}
 
 		if !viper.GetBool("mtu") {

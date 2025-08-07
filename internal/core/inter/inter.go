@@ -70,8 +70,9 @@ func (l InterfaceList) List() []string {
 	return list
 }
 
-func (l InterfaceList) Interface(name string) Interface {
-	return l[name]
+func (l InterfaceList) Interface(name string) (Interface, bool) {
+	i, ok := l[name]
+	return i, ok
 }
 
 func (l InterfaceList) Count() int {
