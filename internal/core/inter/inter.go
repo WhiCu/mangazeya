@@ -70,9 +70,12 @@ func (l InterfaceList) List() []string {
 	return list
 }
 
-func (l InterfaceList) Interface(name string) (Interface, bool) {
+func (l InterfaceList) Interface(name string) (Interface, error) {
 	i, ok := l[name]
-	return i, ok
+	if !ok {
+		return Interface{}, fmt.Errorf("interface %s not found", name)
+	}
+	return i, nil
 }
 
 func (l InterfaceList) Count() int {
@@ -83,10 +86,41 @@ func (l InterfaceList) String() string {
 	b := strings.Builder{}
 
 	for key, value := range l {
-		b.WriteString(fmt.Sprintf("%s:\n%s", key, value))
+		fmt.Fprintf(&b, "%s:\n", key)
+		WithTab(&b, &value)
+		fmt.Fprintf(&b, "\n")
 	}
 
 	return b.String()
+}
+
+func WithTab(builder *strings.Builder, inf *Interface) {
+	if inf.MTU != 0 {
+		fmt.Fprintf(builder, "\tMTU: %d\n", inf.MTU)
+	}
+
+	if len(inf.Flags) != 0 {
+		fmt.Fprintf(builder, "\tFlags: %s\n", strings.Join(inf.Flags, " "))
+	}
+
+	if inf.HardwareAddr != "" {
+		fmt.Fprintf(builder, "\tHardwareAddr: %s\n", inf.HardwareAddr)
+	}
+
+	if len(inf.Addrs) != 0 {
+		fmt.Fprintf(builder, "\tAddrs: ")
+		for _, a := range inf.Addrs {
+			fmt.Fprintf(builder, "%s ", a)
+		}
+		fmt.Fprintf(builder, "\n")
+	}
+
+	// fmt.Fprintf(builder, "\tHardwareAddr: %s\n", inf.HardwareAddr)
+	// fmt.Fprintf(builder, "\tFlags: %s\n", strings.Join(inf.Flags, " "))
+	// fmt.Fprintf(builder, "\tAddrs: ")
+	// for _, a := range inf.Addrs {
+	// 	fmt.Fprintf(builder, "%s ", a)
+	// }
 }
 
 func (l InterfaceList) JSON() ([]byte, error) {
@@ -104,7 +138,7 @@ func Interfaces() (InterfaceList, error) {
 		return nil, err
 	}
 
-	interfaces := make(map[string]Interface)
+	interfaces := make(map[string]Interface, len(stat))
 	for _, i := range stat {
 		interfaces[i.Name] = Interface{
 			MTU:          i.MTU,

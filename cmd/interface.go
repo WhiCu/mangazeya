@@ -15,8 +15,6 @@ import (
 var interfaceCmd = &cobra.Command{
 	Use: "interface",
 	Aliases: []string{
-		"i",
-		"in",
 		"int",
 		"inte",
 		"inter",
@@ -43,10 +41,9 @@ to quickly create a Cobra application.`,
 		var opts []inter.Option
 
 		if name := viper.GetString("name"); name != "" {
-			itf, ok := itfs.Interface(name)
-			if !ok {
-				fmt.Printf("interface %s not found", name)
-				return nil
+			itf, err := itfs.Interface(name)
+			if err != nil {
+				return err
 			}
 			if !viper.GetBool("mtu") {
 				opts = append(opts, inter.WithoutMTU())

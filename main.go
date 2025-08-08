@@ -2,35 +2,24 @@
 
 // import "github.com/WhiCu/mangazeya/cmd"
 
-//	func main() {
-//		cmd.Execute()
-//	}
+// func main() {
+// 	cmd.Execute()
+// }
+
 package main
 
 import (
-	"log"
+	"fmt"
 
-	"github.com/WhiCu/mangazeya/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/WhiCu/mangazeya/pkg/chart"
 )
 
 func main() {
-	// Log to a file. Useful in debugging since you can't really log to stdout.
-	// Not required.
-	if _, err := tea.LogToFile("tmp/log.txt", "debug"); err != nil {
-		log.Println(err)
+	crt := chart.NewChart[uint64](10, 10, 10)
+	values := []uint64{0, 0, 83, 329, 479, 55, 402, 7610, 0, 55, 901, 901, 901, 1235, 5000}
+	for _, v := range values {
+		crt.Add(v)
 	}
+	fmt.Println(crt.View())
 
-	// Initialize our program
-	p := tui.NewProgram()
-	// p := tea.NewProgram(
-	// 	animator.New(
-	// 		animator.StringFrames(frame),
-	// 		time.Second/10,
-	// 	),
-	// 	tea.WithAltScreen(),
-	// )
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
-	}
 }
